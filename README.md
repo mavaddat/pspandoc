@@ -1,9 +1,8 @@
-PSDoc
-=====
+# PowerShell Pandoc Wrapper
 
-## What is PSDoc?
+## What is PSPandoc
 
-PSDoc is convention based PS tooling that wraps the Pandoc tool to provide a automateable document system.
+PSPandoc is convention based PS tooling that wraps the Pandoc tool to provide a automateable document system.
 
 Seperate your document into several smaller source files, write a config file ordering the files, and then generate a single document of any format that Pandoc supports
 
@@ -11,27 +10,27 @@ Seperate your document into several smaller source files, write a config file or
 
 Convention based folder structure:
 
-```
+```cmd
 config
-    foo.psd1
+└───foo.psd1
 content
-	overview.md
-	server.md
-	client.md
-	validation.md
-	architecture_long.md
-	module_dev.md
-	errata.md
+├───overview.md
+├───server.md
+├───client.md
+├───validation.md
+├───architecture_long.md
+├───module_dev.md
+└───errata.md
 headers
-	internal.md
+└───internal.md
 output
-	foo.docx
-	foo.html
+├───foo.docx
+└───foo.html
 ```
 
 Config file is a PowerShell hash structure that matches document order and placement
 
-```
+```powershell
 @{
     Name      = "Foo.1.3.Manual"
     "Header"  = 'headers/internal.md'
@@ -52,4 +51,4 @@ Config file is a PowerShell hash structure that matches document order and place
 
 Will use the folder specified to generate the formatted document
 
-` Format-Files -Path $home\code\foo-docs`
+` Format-Files -Path "$home\code\foo-docs"`

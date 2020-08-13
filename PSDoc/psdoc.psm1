@@ -13,7 +13,7 @@ function Get-Hashtable {
     )
     process
     {
-        Write-Verbose "Loading data from $Path."
+        Write-Verbose "Loading data from '$Path'."
         Invoke-Expression "DATA { $(Get-Content -Raw -Path $Path) }"
     }
 <#
@@ -21,7 +21,7 @@ Copied from PowerShellOrg DSC module https://github.com/PowerShellOrg/DSC/blob/m
 #>
 }
 
-Function Start-PSDoc
+Function Start-PSPandocs
 {
     [CmdletBinding()]
     param(
@@ -35,7 +35,7 @@ Function Start-PSDoc
     $configPath = Join-Path $Path "config"
     $configs = Get-ChildItem -Path $configPath -Filter *.psd1
 
-    $configs | % {
+    $configs | ForEach-Object {
         $files    = @();
         $hash     = Get-Hashtable $_.FullName
         $name     = $hash["Name"]
@@ -50,7 +50,7 @@ Function Start-PSDoc
         Write-Verbose $header
         $files  += $header
 
-        $hash["Content"] | %{
+        $hash["Content"] | ForEach-Object{
             $value = $_
             Write-Verbose $value
 
@@ -65,7 +65,7 @@ Function Start-PSDoc
             $template = (Get-ChildItem (Join-Path $Path $hash["Template"])).FullName; Write-Verbose $template
         }
 
-        $hash["formats"] | % {
+        $hash["formats"] | ForEach-Object {
             $format = $_
             $outfile = "$(Join-Path (Resolve-Path $OutputPath) $name).$($_)"
             Write-Verbose $outfile
@@ -73,7 +73,7 @@ Function Start-PSDoc
             $rawFile = [IO.Path]::GetTempFileName()
             Write-Verbose $rawFile
 
-            $files | %{
+            $files | ForEach-Object{
                 $content += Get-Content -Path $_.FullName -Raw
                 $content += "`n`n"
             }
@@ -115,11 +115,11 @@ Function Start-PSDoc
     }
 <#
 .EXAMPLE
-pushd C:\Users\james\data\code\personal\psdoc
-Import-Module .\PSDoc -Verbose
+pushd C:\Users\james\data\code\personal\PSPandocs
+Import-Module .\PSPandocs -Verbose
 popd
 cd C:\users\james\data\code\ipsoft\ipwin
-Start-PSDoc -Path .\ipwindocs -Verbose
+Start-PSPandocs -Path .\ipwindocs -Verbose
 
 #>
 }
@@ -154,25 +154,11 @@ function New-WordDocument
     try
     {
         $WordApp = New-Object -ComObject 'Word.Application'
-        $WordVersion = [int]$WordApp.Version
-        switch ($WordVersion) {
-            15 {
-                write-verbose 'Running Microsoft Word 2013'
-                $WordProduct = 'Word 2013'
-            }
-            14 {
-                write-verbose 'Running Microsoft Word 2010'
-                $WordProduct = 'Word 2010'
-            }
-            12 {
-                write-verbose 'Running Microsoft Word 2007'
-                $WordProduct = 'Word 2007'
-            }
-            11 {
-                write-verbose 'Running Microsoft Word 2003'
-                $WordProduct = 'Word 2003'
-            }
-        }
+        $OfficeReg = (Get-ChildItem 'HKLM:\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' | where -FilterScript { $_.GetValue("InstallLocation") -ccontains "C:\Program Files\Microsoft Office" })
+        $OfficeVersion = ($OfficeReg.GetValue("DisplayName")  -replace " - .*$",'') -replace 'Microsoft ',''
+
+        Write-Verbose "Running Word $OfficeVersion"
+        $WordProduct = "Word $($office.PSChildName)"
 
         # Create a new blank document to work with and make the Word application visible.
         if($Open)
@@ -283,18 +269,18 @@ function New-WordDocument
             if ($this.WordVersion -eq 12) # Word 2007
             {
                 $BuildingBlocks = $this.Application.Templates |
-                    Where {$_.name -eq 'Building Blocks.dotx'}
+                    Where-Object {$_.name -eq 'Building Blocks.dotx'}
             }
             else
             {
                 $BuildingBlocks = $this.Application.Templates |
-                    Where {$_.name -eq 'Built-In Building Blocks.dotx'}
+                    Where-Object {$_.name -eq 'Built-In Building Blocks.dotx'}
             }
 
             Write-Verbose "$(Get-Date): Attempt to load cover page $($CoverPage)"
             $part = $Null
 
-            if ($BuildingBlocks -ne $Null)
+            if ($Null -ne $BuildingBlocks)
             {
                 $BuildingBlocksExist = $True
 
@@ -308,7 +294,7 @@ function New-WordDocument
                     $part = $Null
                 }
 
-                if ($part -ne $Null)
+                if ($Null -ne $part)
                 {
                     $CoverPagesExist = $True
                 }
@@ -324,14 +310,14 @@ function New-WordDocument
                 #$this.SetDocProp($this.document.BuiltInDocumentProperties, 'Email', $this.Email)
 
                 #Get the Coverpage XML part
-                $cp = $this.Document.CustomXMLParts | where {$_.NamespaceURI -match "coverPageProps$"}
+                $cp = $this.Document.CustomXMLParts | Where-Object {$_.NamespaceURI -match "coverPageProps$"}
 
                 #get the abstract XML part
-                $ab = $cp.documentelement.ChildNodes | Where {$_.basename -eq "Abstract"}
+                $ab = $cp.documentelement.ChildNodes | Where-Object {$_.basename -eq "Abstract"}
                 [string]$abstract = "$($this.Abstract) for $($this.CompanyName)"
                 $ab.Text = $abstract
 
-                $ab = $cp.documentelement.ChildNodes | Where {$_.basename -eq "PublishDate"}
+                $ab = $cp.documentelement.ChildNodes | Where-Object {$_.basename -eq "PublishDate"}
                 [string]$abstract = (Get-Date -Format d).ToString()
                 $ab.Text = $abstract
 
@@ -408,7 +394,7 @@ function New-WordDocument
             {
                 $TableToInsert = ($AllObjects |
                                     ConvertTo-Csv -NoTypeInformation |
-                                        Select -Skip 1 |
+                                        Select-Object -Skip 1 |
                                             Out-String) -replace '"',''
             }
             $Range = $this.Selection.Range
@@ -443,7 +429,7 @@ function New-WordDocument
                 $Value
             )
             #get the property object
-            $prop = $properties | ForEach {
+            $prop = $properties | ForEach-Object {
                 $propname=$_.GetType().InvokeMember("Name","GetProperty",$Null,$_,$Null)
                 If($propname -eq $Name)
                 {
@@ -540,4 +526,4 @@ function New-WordDocument
     }
 }
 
-Export-ModuleMember -Function Start-PSDoc
+Export-ModuleMember -Function Start-PSPandocs
